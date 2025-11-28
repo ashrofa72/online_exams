@@ -1,6 +1,7 @@
 export enum UserRole {
   TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT'
+  STUDENT = 'STUDENT',
+  ADMIN = 'ADMIN'
 }
 
 export interface User {
@@ -16,6 +17,7 @@ export interface User {
 
 export enum QuestionType {
   MCQ = 'MCQ',
+  TRUE_FALSE = 'TRUE_FALSE',
   FILL_BLANK = 'FILL_BLANK',
   SHORT_ANSWER = 'SHORT_ANSWER',
   LONG_ANSWER = 'LONG_ANSWER'
@@ -29,7 +31,7 @@ export interface Question {
   // For MCQ
   options?: string[];
   correctOptionIndex?: number;
-  // For Fill/Short
+  // For Fill/Short/TrueFalse
   correctAnswerText?: string; 
   // For Short (Keywords)
   keywords?: string[];

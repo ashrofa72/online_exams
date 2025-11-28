@@ -224,6 +224,25 @@ export const ExamTaker: React.FC<ExamTakerProps> = ({ exam, user, onClose }) => 
                 </div>
               )}
 
+              {q.type === QuestionType.TRUE_FALSE && (
+                <div className="flex gap-4">
+                  {['صواب', 'خطأ'].map((opt) => (
+                    <label key={opt} className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${answers[q.id] === opt ? 'border-primary bg-indigo-50/50 shadow-sm' : 'border-slate-100 hover:bg-slate-50 hover:border-slate-200'}`}>
+                      <input 
+                        type="radio" 
+                        name={`q-${q.id}`} 
+                        value={opt}
+                        checked={answers[q.id] === opt}
+                        onChange={() => handleAnswerChange(q.id, opt)}
+                        className="hidden"
+                      />
+                      <span className={`text-lg ${answers[q.id] === opt ? 'font-bold text-primary' : 'font-medium text-slate-700'}`}>{opt}</span>
+                      {answers[q.id] === opt && <CheckCircle size={20} className="text-primary" />}
+                    </label>
+                  ))}
+                </div>
+              )}
+
               {(q.type === QuestionType.FILL_BLANK || q.type === QuestionType.SHORT_ANSWER) && (
                 <input 
                   type="text"

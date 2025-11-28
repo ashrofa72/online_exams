@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Exam, Question, QuestionType } from '../types';
-import { Plus, Trash2, Save, MoveUp, MoveDown, CheckCircle, FileText, Type, AlignLeft, X, AlertOctagon, School, PenLine } from 'lucide-react';
+import { Plus, Trash2, Save, MoveUp, MoveDown, CheckCircle, FileText, Type, AlignLeft, X, AlertOctagon, School, PenLine, ToggleLeft } from 'lucide-react';
 import { DbService, auth } from '../services/firebase';
 
 interface ExamBuilderProps {
@@ -59,7 +59,7 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
       marks: 1,
       options: type === QuestionType.MCQ ? ['', '', '', ''] : undefined,
       correctOptionIndex: type === QuestionType.MCQ ? 0 : undefined,
-      correctAnswerText: '',
+      correctAnswerText: type === QuestionType.TRUE_FALSE ? 'صواب' : '', // Default for True/False
       keywords: []
     };
     setQuestions([...questions, newQ]);
@@ -145,6 +145,7 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
   const getQuestionLabel = (type: QuestionType) => {
     switch(type) {
       case QuestionType.MCQ: return "اختيار من متعدد";
+      case QuestionType.TRUE_FALSE: return "صواب أم خطأ";
       case QuestionType.FILL_BLANK: return "أكمل الفراغ";
       case QuestionType.SHORT_ANSWER: return "إجابة قصيرة";
       case QuestionType.LONG_ANSWER: return "سؤال مقالي";
@@ -268,6 +269,9 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
               <button onClick={() => addQuestion(QuestionType.MCQ)} className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-primary hover:text-primary hover:shadow-md transition-all text-sm font-bold text-slate-600">
                 <CheckCircle size={18} /> اختيار من متعدد
               </button>
+              <button onClick={() => addQuestion(QuestionType.TRUE_FALSE)} className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-primary hover:text-primary hover:shadow-md transition-all text-sm font-bold text-slate-600">
+                <ToggleLeft size={18} /> صواب أم خطأ
+              </button>
               <button onClick={() => addQuestion(QuestionType.FILL_BLANK)} className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-xl hover:border-primary hover:text-primary hover:shadow-md transition-all text-sm font-bold text-slate-600">
                 <Type size={18} /> أكمل الفراغ
               </button>
@@ -339,6 +343,37 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
                           />
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* True/False Specifics */}
+                  {q.type === QuestionType.TRUE_FALSE && (
+                    <div className="mb-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                      <label className="block text-xs font-bold text-slate-600 mb-3">حدد الإجابة الصحيحة:</label>
+                      <div className="flex gap-4">
+                        <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${q.correctAnswerText === 'صواب' ? 'border-green-500 bg-green-50 text-green-700' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                          <input 
+                            type="radio" 
+                            name={`tf-${q.id}`} 
+                            checked={q.correctAnswerText === 'صواب'} 
+                            onChange={() => updateQuestion(q.id, { correctAnswerText: 'صواب' })}
+                            className="hidden" 
+                          />
+                          <span className="font-bold">صواب</span>
+                          {q.correctAnswerText === 'صواب' && <CheckCircle size={16} />}
+                        </label>
+                        <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all ${q.correctAnswerText === 'خطأ' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                          <input 
+                            type="radio" 
+                            name={`tf-${q.id}`} 
+                            checked={q.correctAnswerText === 'خطأ'} 
+                            onChange={() => updateQuestion(q.id, { correctAnswerText: 'خطأ' })}
+                            className="hidden" 
+                          />
+                          <span className="font-bold">خطأ</span>
+                          {q.correctAnswerText === 'خطأ' && <CheckCircle size={16} />}
+                        </label>
+                      </div>
                     </div>
                   )}
 

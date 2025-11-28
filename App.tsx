@@ -5,6 +5,7 @@ import { User, UserRole } from './types';
 import { Auth } from './components/Auth';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import { StudentDashboard } from './components/StudentDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { LogOut, Sun } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -55,7 +56,7 @@ const App: React.FC = () => {
           <div className="text-left hidden sm:block">
             <p className="text-sm font-bold text-slate-800">{user.name}</p>
             <p className="text-xs text-slate-500 font-medium">
-              {user.role === UserRole.TEACHER ? 'معلم' : 'طالب'} 
+              {user.role === UserRole.ADMIN ? 'مسؤول النظام' : user.role === UserRole.TEACHER ? 'معلم' : 'طالب'} 
               {user.role === UserRole.STUDENT && ` • ${user.classroom}`}
             </p>
           </div>
@@ -72,7 +73,9 @@ const App: React.FC = () => {
       </nav>
 
       <main>
-        {user.role === UserRole.TEACHER ? (
+        {user.role === UserRole.ADMIN ? (
+          <AdminDashboard />
+        ) : user.role === UserRole.TEACHER ? (
           <TeacherDashboard user={user} />
         ) : (
           <StudentDashboard user={user} />

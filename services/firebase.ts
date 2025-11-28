@@ -16,6 +16,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+const ADMIN_EMAIL = "726863@qena1.moe.edu.eg";
+
 // Helper to remove undefined values which Firestore hates
 const cleanData = (obj: any): any => {
   // If undefined, return undefined so key is omitted in object loop,
@@ -67,12 +69,23 @@ export const AuthService = {
       // If auth exists but profile doesn't, we prompt them to fix it via Sign Up
       throw new Error("User profile data is missing. Please use 'Sign Up' again with your details to repair your account.");
     }
+
+    // Security Check: If email matches Admin but role isn't ADMIN, fix it immediately
+    if (userProfile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && userProfile.role !== UserRole.ADMIN) {
+      console.log("Upgrading user to ADMIN...");
+      userProfile.role = UserRole.ADMIN;
+      await setDoc(doc(db, "users", userProfile.id), cleanData(userProfile));
+    }
+
     return userProfile;
   },
 
   register: async (email: string, password: string, userData: Partial<User>): Promise<User> => {
     let userCredential;
     let isRecovery = false;
+
+    // Force Admin Role if email matches
+    const finalRole = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? UserRole.ADMIN : (userData.role || UserRole.STUDENT);
 
     try {
       // Try to create new account
@@ -97,6 +110,11 @@ export const AuthService = {
     if (isRecovery) {
       const existingProfile = await DbService.getUserProfile(userCredential.user.uid);
       if (existingProfile) {
+        // Double check admin role on recovery
+        if (existingProfile.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && existingProfile.role !== UserRole.ADMIN) {
+           existingProfile.role = UserRole.ADMIN;
+           await setDoc(doc(db, "users", existingProfile.id), cleanData(existingProfile));
+        }
         throw new Error("Account already exists. Please sign in.");
       }
       // If no profile, we proceed to create it (Self-healing)
@@ -106,7 +124,7 @@ export const AuthService = {
       id: userCredential.user.uid,
       email: email,
       name: userData.name || '',
-      role: userData.role || UserRole.STUDENT,
+      role: finalRole,
       studentCode: userData.studentCode,
       teacherCode: userData.teacherCode,
       classroom: userData.classroom,
@@ -135,6 +153,26 @@ export const DbService = {
     const docRef = doc(db, "users", uid);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? (docSnap.data() as User) : null;
+  },
+
+  // --- Admin Operations ---
+  getAllUsers: async (): Promise<User[]> => {
+    const q = query(collection(db, "users"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+  },
+
+  getAllExams: async (): Promise<Exam[]> => {
+    const q = query(collection(db, "exams"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam));
+  },
+
+  deleteUser: async (userId: string): Promise<void> => {
+    // Note: This only deletes the profile from Firestore. 
+    // To delete from Authentication requires Firebase Admin SDK (server-side).
+    // Deleting the profile effectively locks them out of the app.
+    await deleteDoc(doc(db, "users", userId));
   },
 
   // Exam Operations
@@ -230,6 +268,11 @@ export const AutoGrader = {
         if (q.options && q.correctOptionIndex !== undefined) {
           const correctText = q.options[q.correctOptionIndex];
           if (studentAnswer === correctText) score += q.marks;
+        }
+      } else if (q.type === QuestionType.TRUE_FALSE) {
+        // Exact text match (صواب / خطأ)
+        if (studentAnswer === q.correctAnswerText) {
+          score += q.marks;
         }
       } else if (q.type === QuestionType.FILL_BLANK) {
         if (studentAnswer.trim().toLowerCase() === (q.correctAnswerText || "").trim().toLowerCase()) {
