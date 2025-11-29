@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Exam, Question, QuestionType } from '../types';
-import { Plus, Trash2, Save, MoveUp, MoveDown, CheckCircle, FileText, Type, AlignLeft, X, AlertOctagon, School, PenLine, ToggleLeft } from 'lucide-react';
+import { Plus, Trash2, Save, MoveUp, MoveDown, CheckCircle, FileText, Type, AlignLeft, X, AlertOctagon, School, PenLine, ToggleLeft, Clock, Calendar } from 'lucide-react';
 import { DbService, auth } from '../services/firebase';
 
 interface ExamBuilderProps {
@@ -13,6 +13,25 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
   const [description, setDescription] = useState(initialExam?.description || '');
   const [subject, setSubject] = useState(initialExam?.subject || '');
   
+  // Time Settings
+  const [timeLimit, setTimeLimit] = useState<number | ''>(initialExam?.timeLimitMinutes || '');
+  
+  // Date Helpers: Convert ISO string to datetime-local format (YYYY-MM-DDTHH:mm)
+  // FIX: Manually construct local date string to prevent timezone shifting bug caused by toISOString()
+  const formatForInput = (isoString?: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+  
+  const [validFrom, setValidFrom] = useState(formatForInput(initialExam?.validFrom));
+  const [validUntil, setValidUntil] = useState(formatForInput(initialExam?.validUntil));
+
   // New state for multiple classrooms
   const [targetClassrooms, setTargetClassrooms] = useState<string[]>(initialExam?.targetClassrooms || []);
   const [currentClassInput, setCurrentClassInput] = useState('');
@@ -102,6 +121,12 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
       return;
     }
 
+    // Validate Time
+    if (validFrom && validUntil && new Date(validFrom) >= new Date(validUntil)) {
+      setError("تاريخ انتهاء الامتحان يجب أن يكون بعد تاريخ البدء.");
+      return;
+    }
+
     // Validate questions content
     for (let i = 0; i < questions.length; i++) {
       if (!questions[i].text.trim()) {
@@ -129,6 +154,9 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
         targetClassrooms, // Send array
         questions,
         published: publish,
+        timeLimitMinutes: timeLimit ? Number(timeLimit) : undefined,
+        validFrom: validFrom ? new Date(validFrom).toISOString() : undefined,
+        validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
         createdAt: initialExam?.createdAt || new Date().toISOString()
       };
 
@@ -224,6 +252,39 @@ export const ExamBuilder: React.FC<ExamBuilderProps> = ({ onClose, initialExam }
                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all bg-white" 
                  placeholder="فيزياء"
                />
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-4">
+              <h4 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Clock size={16}/> إعدادات التوقيت</h4>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">مدة الامتحان (بالدقائق)</label>
+                <input 
+                  type="number"
+                  min="1"
+                  value={timeLimit} onChange={e => setTimeLimit(e.target.value ? parseInt(e.target.value) : '')} 
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary outline-none" 
+                  placeholder="اتركه فارغاً لوقت مفتوح"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">تاريخ ووقت البدء (السماح بالدخول)</label>
+                <input 
+                  type="datetime-local"
+                  value={validFrom} onChange={e => setValidFrom(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary outline-none dir-ltr text-right" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">تاريخ ووقت الانتهاء (إغلاق الامتحان)</label>
+                <input 
+                  type="datetime-local"
+                  value={validUntil} onChange={e => setValidUntil(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary outline-none dir-ltr text-right" 
+                />
+              </div>
             </div>
 
             <div>

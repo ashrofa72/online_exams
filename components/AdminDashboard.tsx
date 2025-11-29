@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Exam, UserRole } from '../types';
 import { DbService } from '../services/firebase';
-import { Users, BookOpen, Trash2, ShieldCheck, GraduationCap, Search, LayoutDashboard, Plus, Edit } from 'lucide-react';
+import { Users, BookOpen, Trash2, ShieldCheck, GraduationCap, Search, LayoutDashboard, Plus, Edit, AlertTriangle } from 'lucide-react';
 import { ExamBuilder } from './ExamBuilder';
 
 export const AdminDashboard: React.FC = () => {
@@ -12,6 +12,14 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+
+  // Delete Modal State
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    type: 'user' | 'exam' | null;
+    id: string | null;
+    name?: string;
+  }>({ show: false, type: null, id: null });
 
   const refreshData = async () => {
     setLoading(true);
@@ -24,7 +32,7 @@ export const AdminDashboard: React.FC = () => {
       setExams(examsData);
     } catch (e) {
       console.error(e);
-      alert('فشل في تحميل البيانات');
+      // Removed native alert
     } finally {
       setLoading(false);
     }
@@ -34,17 +42,25 @@ export const AdminDashboard: React.FC = () => {
     refreshData();
   }, []);
 
-  const handleDeleteUser = async (userId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ سيؤدي ذلك إلى منعهم من الدخول.')) {
-      await DbService.deleteUser(userId);
-      setUsers(users.filter(u => u.id !== userId));
-    }
+  const openDeleteModal = (type: 'user' | 'exam', id: string, name: string) => {
+    setDeleteModal({ show: true, type, id, name });
   };
 
-  const handleDeleteExam = async (examId: string) => {
-    if (confirm('هل أنت متأكد من حذف هذا الامتحان؟')) {
-      await DbService.deleteExam(examId);
-      setExams(exams.filter(e => e.id !== examId));
+  const executeDelete = async () => {
+    if (!deleteModal.id || !deleteModal.type) return;
+
+    try {
+      if (deleteModal.type === 'user') {
+        await DbService.deleteUser(deleteModal.id);
+        setUsers(users.filter(u => u.id !== deleteModal.id));
+      } else {
+        await DbService.deleteExam(deleteModal.id);
+        setExams(exams.filter(e => e.id !== deleteModal.id));
+      }
+    } catch (error) {
+      console.error("Delete failed", error);
+    } finally {
+      setDeleteModal({ show: false, type: null, id: null });
     }
   };
 
@@ -209,7 +225,7 @@ export const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       {u.role !== UserRole.ADMIN && (
                         <button 
-                          onClick={() => handleDeleteUser(u.id)}
+                          onClick={() => openDeleteModal('user', u.id, u.name)}
                           className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
                           title="حذف المستخدم"
                         >
@@ -259,7 +275,7 @@ export const AdminDashboard: React.FC = () => {
                           <Edit size={18} />
                         </button>
                         <button 
-                          onClick={() => handleDeleteExam(e.id)}
+                          onClick={() => openDeleteModal('exam', e.id, e.title)}
                           className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
                           title="حذف الامتحان"
                         >
@@ -274,6 +290,42 @@ export const AdminDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-white/20">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600">
+              <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-center text-slate-800 mb-3">تأكيد الحذف</h3>
+            <p className="text-center text-slate-600 mb-8 leading-relaxed">
+              هل أنت متأكد من رغبتك في حذف 
+              <span className="font-bold text-slate-900 mx-1">
+                {deleteModal.type === 'user' ? 'المستخدم' : 'الامتحان'} 
+                {deleteModal.name ? ` (${deleteModal.name})` : ''}
+              </span>
+              نهائياً؟
+              <br/>
+              <span className="text-sm font-bold text-red-500 mt-2 block">لا يمكن التراجع عن هذا الإجراء.</span>
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setDeleteModal({ show: false, type: null, id: null })}
+                className="flex-1 py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button 
+                onClick={executeDelete}
+                className="flex-1 py-3.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 shadow-lg shadow-red-200 transition-colors"
+              >
+                نعم، حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

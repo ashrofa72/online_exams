@@ -3,7 +3,7 @@ import { User, Exam } from '../types';
 import { DbService } from '../services/firebase';
 import { ExamBuilder } from './ExamBuilder';
 import { ResultsView } from './ResultsView';
-import { Plus, Book, Calendar, Users, Eye, EyeOff, LayoutDashboard, Trash2, Edit } from 'lucide-react';
+import { Plus, Book, Calendar, Users, Eye, EyeOff, LayoutDashboard, Trash2, Edit, Clock } from 'lucide-react';
 
 interface Props {
   user: User;
@@ -56,6 +56,11 @@ export const TeacherDashboard: React.FC<Props> = ({ user }) => {
       setDeleteModal({ show: false, examId: null });
       refreshExams();
     }
+  };
+
+  const formatShortDate = (isoString?: string) => {
+    if (!isoString) return null;
+    return new Date(isoString).toLocaleString('ar-EG', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' });
   };
 
   if (view === 'create') {
@@ -127,8 +132,14 @@ export const TeacherDashboard: React.FC<Props> = ({ user }) => {
                  </div>
                  <div className="flex items-center gap-2.5 text-sm font-medium text-slate-600">
                     <Calendar size={18} className="text-slate-400" />
-                    <span>{new Date(exam.createdAt).toLocaleDateString('ar-EG')}</span>
+                    <span>تاريخ الإنشاء: {new Date(exam.createdAt).toLocaleDateString('ar-EG')}</span>
                  </div>
+                 {(exam.validFrom || exam.validUntil) && (
+                   <div className="flex flex-col gap-1 mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100 text-xs">
+                     {exam.validFrom && <div className="flex justify-between text-slate-600"><span>يبدأ:</span> <span className="font-mono font-bold">{formatShortDate(exam.validFrom)}</span></div>}
+                     {exam.validUntil && <div className="flex justify-between text-slate-600"><span>ينتهي:</span> <span className="font-mono font-bold">{formatShortDate(exam.validUntil)}</span></div>}
+                   </div>
+                 )}
                </div>
 
                <div className="mt-auto grid grid-cols-4 gap-2 pt-5 border-t border-slate-50">

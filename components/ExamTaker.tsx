@@ -12,7 +12,31 @@ interface ExamTakerProps {
 export const ExamTaker: React.FC<ExamTakerProps> = ({ exam, user, onClose }) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(exam.timeLimitMinutes ? exam.timeLimitMinutes * 60 : null);
+
+  // Initialize Timer Logic
+  // We need to account for both the Exam Duration (timeLimitMinutes)
+  // AND the End Date (validUntil). The time left is the minimum of the two.
+  const calculateInitialTimeLeft = () => {
+    const now = new Date();
+    let durationSeconds = exam.timeLimitMinutes ? exam.timeLimitMinutes * 60 : null;
+    
+    if (exam.validUntil) {
+      const end = new Date(exam.validUntil);
+      const secondsUntilEnd = Math.floor((end.getTime() - now.getTime()) / 1000);
+      
+      if (secondsUntilEnd <= 0) return 0; // Already expired
+      
+      if (durationSeconds !== null) {
+        return Math.min(durationSeconds, secondsUntilEnd);
+      } else {
+        return secondsUntilEnd; // Use end time limit if no specific duration set
+      }
+    }
+    
+    return durationSeconds;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(calculateInitialTimeLeft());
   
   // Modal States
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -150,8 +174,13 @@ export const ExamTaker: React.FC<ExamTakerProps> = ({ exam, user, onClose }) => 
   };
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
+    
+    if (h > 0) {
+      return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 

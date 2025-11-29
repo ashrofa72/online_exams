@@ -43,10 +43,12 @@ export interface Exam {
   title: string;
   description: string;
   subject: string;
-  targetClassrooms: string[]; // Changed to array
+  targetClassrooms: string[]; 
   questions: Question[];
   published: boolean;
   timeLimitMinutes?: number;
+  validFrom?: string; // ISO Date String: Start Time
+  validUntil?: string; // ISO Date String: End Time
   createdAt: string;
 }
 
